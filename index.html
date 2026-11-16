@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171513" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Museum Match">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Museum Match — Lucía & Eric</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{--bg:#faf7f2;--ink:#1d1b18;--muted:#6b655c;--line:#e6dfd3;--card:#fff;--accent:#c2410c;--accent-bg:#fdeee5;--sp:#6d28d9;--sp-bg:#efe8fd;
+        --lucia:#059669;--lucia-bg:#d1fae5;--eric:#2563eb;--eric-bg:#dbeafe;--match:#c2410c;--match-bg:#fdeee5;--maybe:#b45309;--maybe-bg:#fef3c7;
+        --warn-bg:#fef3c7;--warn:#92400e;--ok:#15803d;--ok-bg:#dcfce7;--bad:#b91c1c;--bad-bg:#fee2e2}
+  @media (prefers-color-scheme:dark){:root{--bg:#171513;--ink:#f2ede6;--muted:#a59d92;--line:#33302b;--card:#211e1b;--accent:#fb923c;--accent-bg:#3a2518;--sp:#c4b5fd;--sp-bg:#2e2547;
+        --lucia:#34d399;--lucia-bg:#0f3d2e;--eric:#60a5fa;--eric-bg:#1e2f4f;--match:#fb923c;--match-bg:#3a2518;--maybe:#fbbf24;--maybe-bg:#3d2e0c;
+        --warn-bg:#3d2e0c;--warn:#fcd34d;--ok:#86efac;--ok-bg:#14391f;--bad:#fca5a5;--bad-bg:#4c1d1d}}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px 20px 60px;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+  a{color:var(--accent)}
+  button{font:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  h1,h2,h3{font-family:Fraunces,serif;font-weight:700}
+  /* ---------- top bar ---------- */
+  .top{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding-top:max(0px,env(safe-area-inset-top))}
+  .brand{font-family:Fraunces,serif;font-weight:900;font-size:22px;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+  .brand .heart{color:var(--accent)}
+  .chipwrap{margin-left:auto;position:relative}
+  .chip{display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--card);color:var(--ink);padding:5px 12px 5px 6px;border-radius:99px;cursor:pointer;font-weight:700;position:relative}
+  .chip .av{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff}
+  .av.l{background:var(--lucia)} .av.e{background:var(--eric)}
+  .chip.l{border-color:var(--lucia)} .chip.e{border-color:var(--eric)}
+  .chip .car{font-size:10px;color:var(--muted)}
+  .menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.14);min-width:240px;padding:6px;z-index:30;text-align:left}
+  .menu button,.menu .mi{display:flex;width:100%;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);padding:10px 12px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px;text-align:left}
+  .menu button:hover{background:var(--bg)}
+  .menu .mi{color:var(--muted);font-weight:500;font-size:12px;cursor:default}
+  .menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+  /* ---------- sync banner ---------- */
+  .bar-warn{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 25%,transparent);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:13px;font-weight:600}
+  .bar-warn button{margin-left:auto;background:var(--warn);color:var(--warn-bg);border:0;border-radius:99px;padding:6px 12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .bar-warn .ico{font-size:18px}
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:4px;margin:0 0 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{font-weight:600;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:9px;cursor:pointer;display:flex;gap:6px;align-items:center;white-space:nowrap;position:relative}
+  .tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+  .badge{font-size:11px;font-weight:800;background:var(--match);color:#fff;border-radius:99px;padding:1px 7px;min-width:20px;text-align:center}
+  .dot{position:absolute;top:4px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--match);border:2px solid var(--card)}
+  /* ---------- welcome ---------- */
+  .welcome{max-width:520px;margin:30px auto 0;text-align:center}
+  .welcome h1{font-size:clamp(34px,7vw,48px);font-weight:900;line-height:1.05;margin:0 0 10px}
+  .welcome p{color:var(--muted);margin:0 0 22px}
+  .welcome .lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
+  .pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pbig{border:2px solid var(--line);background:var(--card);border-radius:20px;padding:18px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:800;font-size:17px;color:var(--ink);transition:.15s}
+  .pbig .av{width:56px;height:56px;font-size:24px;border-radius:50%;display:grid;place-items:center;color:#fff}
+  .pbig.l:hover,.pbig.l:focus-visible{border-color:var(--lucia);background:var(--lucia-bg)} .pbig.e:hover,.pbig.e:focus-visible{border-color:var(--eric);background:var(--eric-bg)}
+  .pbig small{font-weight:500;color:var(--muted);font-size:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chipb{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:13px}
+  .chipb[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  /* ---------- swipe ---------- */
+  #swipeView{display:flex;flex-direction:column;align-items:center;gap:14px;padding:2px 0 10px}
+  .deckrow{width:min(430px,100%);display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .deckrow select{font:inherit;font-size:13px;font-weight:600;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);max-width:60%}
+  .progress{width:min(430px,100%);font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .bar{flex:1;height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+  .card{touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab;width:min(430px,100%);background:var(--card);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 12px 34px rgba(0,0,0,.1);transition:transform .28s ease,opacity .28s ease;position:relative}
+  .card.out-left{transform:translateX(-120%) rotate(-12deg);opacity:0}
+  .card.out-right{transform:translateX(120%) rotate(12deg);opacity:0}
+  .card.out-down{transform:translateY(60%) scale(.9);opacity:0}
+  .card.in{animation:pop .25s ease}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+  .pic{height:260px;display:flex;align-items:center;justify-content:center;position:relative;color:#fff}
+  .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;-webkit-user-drag:none;pointer-events:none}
+  .pic::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 45%);pointer-events:none;z-index:1}
+  .pic>*{z-index:2}
+  .pic .emo{font-size:96px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25))}
+  .pic .city{position:absolute;left:14px;bottom:12px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.35);padding:4px 10px;border-radius:99px}
+  .pic .credit{position:absolute;right:10px;bottom:12px;font-size:10px;color:#fff;text-decoration:none;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:99px}
+  .pic .stamp{position:absolute;top:16px;right:16px;font-weight:800;font-size:13px;padding:4px 10px;border-radius:8px;border:2px solid #fff;background:rgba(0,0,0,.35)}
+  .pic .other{position:absolute;top:16px;left:16px;font-weight:700;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(0,0,0,.4);display:flex;align-items:center;gap:6px}
+  .dragstamp{position:absolute;top:28px;font-family:Fraunces,serif;font-weight:900;font-size:34px;letter-spacing:.04em;padding:4px 14px;border:4px solid;border-radius:12px;opacity:0;z-index:5;pointer-events:none;background:rgba(255,255,255,.08)}
+  .dragstamp.like{left:22px;color:#22c55e;border-color:#22c55e;transform:rotate(-14deg)}
+  .dragstamp.nope{right:22px;color:#ef4444;border-color:#ef4444;transform:rotate(14deg)}
+  .cbody{padding:18px 20px 20px}
+  .cbody h2{margin:0 0 6px;font-size:25px;line-height:1.12}
+  .cbody p{margin:0 0 12px}
+  .tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;line-height:1.35}
+  .sp{background:var(--sp-bg);color:var(--sp)}
+  .no-sp{background:var(--line);color:var(--muted)}
+  .actions{display:flex;gap:12px;align-items:center;justify-content:center;width:min(430px,100%)}
+  .btn{font-weight:800;border:0;cursor:pointer;border-radius:99px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s}
+  .btn:active{transform:scale(.94)}
+  .btn:disabled{opacity:.35;cursor:default}
+  .nope{background:var(--bad-bg);color:var(--bad);padding:14px 22px;font-size:17px;flex:1}
+  .like{background:var(--ok-bg);color:var(--ok);padding:14px 22px;font-size:17px;flex:1}
+  .maybe{background:var(--maybe-bg);color:var(--maybe);padding:10px 14px;font-size:14px}
+  .back{background:var(--card);border:1px solid var(--line);color:var(--muted);padding:10px 14px;font-size:14px}
+  .hint{font-size:12px;color:var(--muted);text-align:center}
+  .done{width:min(430px,100%);text-align:center;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px 24px}
+  .done .big{font-size:56px}
+  .done h2{margin:6px 0}
+  .done .sub{color:var(--muted);font-size:14px}
+  .row-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  .pill{font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 14px;cursor:pointer}
+  .pill.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pill.danger{color:var(--bad);border-color:var(--bad-bg)}
+  .skel{width:min(430px,100%);height:420px;border-radius:24px;background:linear-gradient(90deg,var(--line),var(--card),var(--line));background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+  /* ---------- modal ---------- */
+  .ov{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(10,8,6,.72);backdrop-filter:blur(4px);animation:fade .25s;padding:16px}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .mbox{width:min(440px,100%);background:var(--card);border-radius:28px;padding:26px 22px 22px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:pop .35s cubic-bezier(.2,1.4,.4,1);position:relative;overflow:hidden}
+  .mbox h2{font-weight:900;font-size:44px;line-height:1;margin:0;color:var(--accent);letter-spacing:-.02em}
+  .mbox h3{font-size:22px;margin:0 0 6px}
+  .mbox .sub{color:var(--muted);margin:8px 0 16px}
+  .mbox .avs{display:flex;justify-content:center;align-items:center;margin:10px 0}
+  .mbox .av{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:26px;font-weight:900;color:#fff;border:4px solid var(--card);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+  .mbox .av.e{margin-left:-12px}
+  .mbox .mh{font-size:30px;margin:0 6px;animation:beat 1s infinite}
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+  .mbox .mus{font-family:Fraunces,serif;font-size:22px;font-weight:700;margin:4px 0}
+  .mbox img{width:100%;height:150px;object-fit:cover;border-radius:16px;margin:8px 0 6px}
+  .confetti{position:absolute;top:-10px;width:10px;height:16px;border-radius:2px;animation:drop linear forwards;opacity:.9}
+  @keyframes drop{to{transform:translateY(110vh) rotate(720deg);opacity:.6}}
+  .pin{display:flex;gap:8px;justify-content:center;margin:14px 0}
+  .pin input{width:52px;height:60px;font:700 26px Inter,system-ui;text-align:center;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink)}
+  .pin input:focus{border-color:var(--accent);outline:0}
+  .err{color:var(--bad);font-size:13px;font-weight:600;min-height:18px}
+  .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:99px;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:60;animation:pop .3s;display:flex;gap:10px;align-items:center;max-width:92vw}
+  .toast button{background:var(--accent);color:#fff;border:0;border-radius:99px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:13px}
+  /* ---------- matches / profile grid ---------- */
+  .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+  .mhead h2{font-size:26px;margin:0}
+  .mhead .sub{color:var(--muted);font-size:13px}
+  .mhead .tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mhead select{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .mcard{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .mcard.visited{opacity:.78}
+  .mcard.visited .mp img{filter:grayscale(.5)}
+  .mcard .mp{height:140px;display:grid;place-items:center;position:relative;color:#fff}
+  .mcard .mp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .mcard .mp .emo{font-size:56px;z-index:1}
+  .mcard .mb{padding:12px 14px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .mcard h3{margin:0;font-size:16px}
+  .mcard .c{font-size:12px;color:var(--muted)}
+  .mcard p{margin:0;font-size:13px}
+  .mcard .ribbon{position:absolute;top:10px;left:10px;background:var(--match);color:#fff;font-weight:900;font-size:11px;letter-spacing:.08em;padding:3px 9px;border-radius:99px;z-index:2}
+  .mcard .ribbon.l{background:var(--lucia)} .mcard .ribbon.e{background:var(--eric)} .mcard .ribbon.wait{background:var(--muted)} .mcard .ribbon.ok{background:var(--ok)}
+  .mcard .links{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+  .lnk{font-size:12px;font-weight:700;text-decoration:none;border:1px solid var(--line);border-radius:99px;padding:4px 10px;color:var(--ink);background:var(--bg);cursor:pointer}
+  .lnk.on{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+  .mcard input[type=date]{font:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;background:var(--bg);color:var(--ink)}
+  .empty{text-align:center;color:var(--muted);padding:40px 20px;background:var(--card);border:1px dashed var(--line);border-radius:18px}
+  .empty .big{font-size:48px}
+  .pstats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 16px;min-width:110px}
+  .stat b{display:block;font-family:Fraunces,serif;font-size:26px;line-height:1.1}
+  .stat span{font-size:12px;color:var(--muted)}
+  .stat.l b{color:var(--lucia)} .stat.e b{color:var(--eric)} .stat.m b{color:var(--match)} .stat.y b{color:var(--maybe)}
+  .filt{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  /* ---------- tabel ---------- */
+  .controls{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  input[type=search],select.ctl{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+  input[type=search]{flex:1;min-width:180px}
+  label.chk{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;user-select:none}
+  .count{font-size:13px;color:var(--muted);margin-left:auto}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+  th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:10px;border-bottom:2px solid var(--line);position:sticky;top:var(--ctl-h,58px);background:var(--bg);z-index:4}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+  td.n{font-weight:600;min-width:160px}
+  td.c{color:var(--muted);white-space:normal;max-width:150px;font-size:13px}
+  td.desc{min-width:280px}
+  .ctr{text-align:center;width:100px}
+  .yes{color:var(--ok);font-weight:800;font-size:18px}
+  .no{color:var(--bad);font-weight:800;font-size:18px}
+  .dash{color:var(--muted)}
+  .info{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--sp-bg);color:var(--sp);font-size:11px;font-weight:800;cursor:help;vertical-align:middle;margin-left:4px}
+  tr.ismatch td{background:var(--match-bg)}
+  .vote{display:inline-flex;gap:4px}
+  .vote button{width:34px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;font-weight:800;font-size:14px}
+  .vote button.on-like{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+  .vote button.on-nope{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+  .vote button.on-maybe{background:var(--maybe-bg);color:var(--maybe);border-color:transparent}
+  .mtag{font-weight:900;color:var(--match);font-size:12px;letter-spacing:.06em}
+  footer{margin-top:40px;font-size:13px;color:var(--muted)}
+  /* ---------- responsive ---------- */
+  @media (max-width:720px){
+    .wrap{padding-top:10px;padding-bottom:40px}
+    .brand{font-size:19px}
+    .tabs{width:100%;justify-content:space-between}
+    .tabs button{flex:1;justify-content:center;padding:9px 4px;font-size:13px}
+    .welcome{margin-top:10px}
+    .pic{height:220px}
+    .pic .city{font-size:11px;bottom:34px}
+    .pic .credit{bottom:10px;right:auto;left:14px}
+    .cbody{padding:14px 16px 16px}
+    .cbody h2{font-size:22px}
+    .cbody p{font-size:14px}
+    .actions{gap:8px}
+    .nope,.like{padding:14px 10px;font-size:16px}
+    .back,.maybe{padding:10px 10px;font-size:13px}
+    .hint{display:none}
+    .mbox{padding:22px 18px 18px}
+    .mbox h2{font-size:34px}
+    .mbox img{height:130px}
+    .mhead h2{font-size:22px}
+    .mhead .tools{margin-left:0;width:100%}
+    .pstats{gap:8px}
+    .stat{flex:1;min-width:calc(50% - 8px);padding:8px 12px}
+    .stat b{font-size:22px}
+    .mgrid{grid-template-columns:1fr 1fr;gap:10px}
+    .mcard .mp{height:110px}
+    .mcard .mb{padding:10px 11px 10px}
+    .mcard h3{font-size:14px}
+    .mcard p{font-size:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .controls{gap:8px;padding:8px 0}
+    input[type=search]{min-width:0;width:100%;flex:1 1 100%}
+    select.ctl{flex:1 1 40%;min-width:0;font-size:13px}
+    .count{width:100%;margin-left:0;font-size:12px}
+    table,thead,tbody,tr,td{display:block}
+    thead{display:none}
+    tr{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px 0}
+    tr.ismatch{border-color:var(--match);background:var(--match-bg)}
+    tr.ismatch td{background:transparent}
+    td{padding:2px 0;border:0}
+    td.n{font-size:16px;font-family:Fraunces,serif;font-weight:700;min-width:0}
+    td.c{font-size:12px;white-space:normal}
+    td.desc{font-size:13px;margin:4px 0 6px}
+    td.ctr{margin-top:4px;display:inline-flex;align-items:center;gap:6px;width:auto;text-align:left;margin-right:12px;font-size:13px}
+    td.ctr::before{content:attr(data-l);font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+    td .note{display:block;font-size:11px;color:var(--muted);margin:4px 0 0}
+    .info{display:none}
+    .yes,.no{font-size:16px}
+    footer{font-size:12px;margin-top:28px}
+  }
+  @media (max-width:400px){.mgrid{grid-template-columns:1fr}.mcard .mp{height:140px}.mcard p{-webkit-line-clamp:unset;display:block}}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.confetti{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" id="top" hidden>
+    <div class="brand">Museum Match <span class="heart">♥</span></div>
+    <div class="chipwrap">
+      <button class="chip" id="meChip" aria-haspopup="menu" aria-expanded="false"><span class="av" id="meAv">L</span><span id="meName">Lucía</span><span class="car">▼</span></button>
+      <div class="menu" id="menu" hidden role="menu">
+        <div class="mi" id="syncLine">…</div>
+        <hr>
+        <button role="menuitem" id="mSwitch">🔁 Wissel van profiel</button>
+        <button role="menuitem" id="mReset">🗑️ Mijn swipes wissen</button>
+        <button role="menuitem" id="mHelp">❓ Hoe werkt het?</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="bar-warn" id="syncBar" hidden role="alert"><span class="ico">⚠️</span><span id="syncMsg">Geen verbinding: je swipes worden alleen in deze browser bewaard en Eric ziet ze niet.</span><button id="syncRetry">Opnieuw proberen</button></div>
+
+  <section id="welcome" class="welcome">
+    <h1>Museum Match <span style="color:var(--accent)">♥</span></h1>
+    <p>Swipe door 108 musea waar je gratis naar binnen kunt met de Museumkaart. Willen jullie allebei ergens heen? Dan is het een <strong>match</strong>.</p>
+    <div class="lbl">Wie ben jij?</div>
+    <div class="pick">
+      <button class="pbig l" data-u="lucia"><span class="av l">L</span>Lucía<small id="wlL"></small></button>
+      <button class="pbig e" data-u="eric"><span class="av e">E</span>Eric<small id="wlE"></small></button>
+    </div>
+    <div class="lbl">Welke stapel?</div>
+    <div class="chips" id="deckChips"></div>
+  </section>
+
+  <div id="app" hidden>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabSwipe" aria-selected="true">🔥 Swipen</button>
+      <button role="tab" id="tabMatch" aria-selected="false">♥ Matches <span class="badge" id="mBadge">0</span><span class="dot" id="mDot" hidden></span></button>
+      <button role="tab" id="tabProfile" aria-selected="false">👤 Profiel</button>
+      <button role="tab" id="tabTable" aria-selected="false">📋 Tabel</button>
+    </div>
+
+    <section id="swipeView"></section>
+
+    <section id="matchView" hidden>
+      <div class="mhead"><h2>Matching Musea</h2><span class="sub" id="mSub"></span>
+        <div class="tools"><label class="sr" for="mSort">Sorteren</label><select id="mSort"><option value="city">Sorteer: stad</option><option value="name">Sorteer: naam</option><option value="sp">Stadspas eerst</option><option value="visited">Bezocht laatst</option></select><button class="pill primary" id="mRandom">🎲 Kies er eentje voor ons</button></div>
+      </div>
+      <div id="mList"></div>
+    </section>
+
+    <section id="profileView" hidden>
+      <div class="mhead"><h2 id="pTitle">Mijn profiel</h2><span class="sub" id="pSub"></span>
+        <div class="tools"><span class="sub">Bekijk:</span><button class="chipb" id="pvL">Lucía</button><button class="chipb" id="pvE">Eric</button></div></div>
+      <div class="pstats" id="pStats"></div>
+      <div class="filt" id="pFilt"></div>
+      <div id="pList"></div>
+    </section>
+
+    <section id="tableView" hidden>
+      <div class="controls" id="controls">
+        <input type="search" id="q" placeholder="Zoek museum, stad of thema…" aria-label="Zoeken">
+        <select class="ctl" id="prov" aria-label="Provincie"><option value="">Alle provincies</option></select>
+        <select class="ctl" id="fChoice" aria-label="Filter"><option value="">Alles</option><option value="match">Alleen matches</option><option value="lucia">Lucía wil</option><option value="eric">Eric wil</option><option value="maybe">Misschien (van iemand)</option><option value="none">Nog niet beoordeeld</option></select>
+        <label class="chk"><input type="checkbox" id="onlySp"> Alleen met Stadspas</label>
+        <span class="count" id="count"></span>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <footer>
+      <p><strong>Goed om te weten:</strong> sommige musea rekenen met de Museumkaart een toeslag bij speciale tentoonstellingen, en het Anne Frank Huis rekent € 1 reserveringskosten. Stadspas-acties zijn meestal 1× per maand per museum en vaak moet je online reserveren met de Stadspas-optie. Acties veranderen: check altijd <a href="https://stadspas.amsterdam.nl/">stadspas.amsterdam.nl</a>.</p>
+    </footer>
+  </div>
+</div>
+
+<script>
+const M = [
+// [naam, stad, provincie, beschrijving, stadspas(bool|string)]
+["Rijksmuseum","Amsterdam","Noord-Holland","Hét nationale museum: Rembrandt (De Nachtwacht), Vermeer en 800 jaar Nederlandse kunst en geschiedenis.",true],
+["Van Gogh Museum","Amsterdam","Noord-Holland","De grootste Van Gogh-collectie ter wereld: de Zonnebloemen, De Aardappeleters en zijn brieven.",true],
+["Stedelijk Museum","Amsterdam","Noord-Holland","Moderne kunst en design: Mondriaan, Malevich, Warhol, Appel. Tot januari 2027 een grote Yayoi Kusama-expo.","Gratis 19+ · t/m 30 nov 2026 mag je gratis iemand meenemen naar Kusama"],
+["Anne Frank Huis","Amsterdam","Noord-Holland","Het Achterhuis waar Anne Frank haar dagboek schreef. Reserveren met tijdslot verplicht.",true],
+["Museum Het Rembrandthuis","Amsterdam","Noord-Holland","Het gerestaureerde woon- en werkhuis van Rembrandt, met zijn etsen en demonstraties van zijn technieken.",true],
+["Joods Museum + Portugese Synagoge","Amsterdam","Noord-Holland","Joodse geschiedenis en cultuur, een kindermuseum en de 17de-eeuwse synagoge. Onderdeel van het Joods Cultureel Kwartier.",true],
+["Nationaal Holocaustmuseum","Amsterdam","Noord-Holland","De vervolging van de Joden in Nederland, tegenover de voormalige Hollandsche Schouwburg.",false],
+["Het Scheepvaartmuseum","Amsterdam","Noord-Holland","Maritiem museum in een zeemagazijn uit 1656, met een replica van een VOC-schip.",true],
+["NEMO Science Museum","Amsterdam","Noord-Holland","Interactieve wetenschap voor alle leeftijden, met een dakterras met uitzicht over de stad.",true],
+["Verzetsmuseum","Amsterdam","Noord-Holland","Het Nederlandse verzet en het dagelijks leven tijdens de bezetting; ook een junior-afdeling.",true],
+["Wereldmuseum Amsterdam","Amsterdam","Noord-Holland","Het vroegere Tropenmuseum: wereldculturen in een spectaculair gebouw.",true],
+["Amsterdam Museum (in H'ART Museum)","Amsterdam","Noord-Holland","De geschiedenis van de stad. Tijdelijk gehuisvest in het H'ART-gebouw (de oude Hermitage) aan de Amstel.",true],
+["H'ART Museum","Amsterdam","Noord-Holland","Internationale tentoonstellingen in samenwerking met grote musea (British Museum, Centre Pompidou…).",false],
+["Allard Pierson","Amsterdam","Noord-Holland","Archeologie en collecties van de UvA: Egypte, Griekenland, Rome, kaarten en boeken.",true],
+["Museum Ons' Lieve Heer op Solder","Amsterdam","Noord-Holland","Een katholieke schuilkerk verstopt op de zolder van een 17de-eeuws grachtenpand.",true],
+["Grachtenmuseum","Amsterdam","Noord-Holland","Hoe de grachtengordel gebouwd werd, in een pand aan de Herengracht.",true],
+["Museum Van Loon","Amsterdam","Noord-Holland","Grachtenpand met stijlkamers, familieportretten, tuin en koetshuis.",true],
+["Huis Willet-Holthuysen","Amsterdam","Noord-Holland","19de-eeuws woonhuismuseum: zo leefde een rijke familie aan de Herengracht.",true],
+["Huis Bartolotti","Amsterdam","Noord-Holland","Renaissance-grachtenpand uit de 17de eeuw van Hendrick de Keyser.",false],
+["Foam","Amsterdam","Noord-Holland","Fotografiemuseum met wisselende exposities van gevestigde en opkomende fotografen.",true],
+["Huis Marseille","Amsterdam","Noord-Holland","Het eerste fotografiemuseum van de stad, in twee grachtenpanden met tuin.",true],
+["Eye Filmmuseum","Amsterdam","Noord-Holland","Filmmuseum aan het IJ: tentoonstellingen, bioscoop en een iconisch gebouw.",true],
+["Museum Het Schip","Amsterdam","Noord-Holland","Amsterdamse School-architectuur en arbeiderswoningen, in een gebouw uit 1920.",true],
+["Van Eesteren Museum","Amsterdam","Noord-Holland","Naoorlogse stedenbouw van Nieuw-West, inclusief een jaren-50-museumwoning.",true],
+["Amsterdam in Motion","Amsterdam","Noord-Holland","Een maquette van 200 m² van Amsterdam met licht en animatie: van dorp tot metropool.","Gratis 18+ (kinderen sowieso gratis)"],
+["ARTIS Groote Museum","Amsterdam","Noord-Holland","Museum in ARTIS over de band tussen mens en natuur.",true],
+["ARTIS-Micropia","Amsterdam","Noord-Holland","Het enige museum ter wereld over microben.",true],
+["Embassy of the Free Mind","Amsterdam","Noord-Holland","Bibliotheek en museum over hermetische filosofie en mystiek in het Huis met de Hoofden.",true],
+["Luther Museum","Amsterdam","Noord-Holland","De geschiedenis van de Amsterdamse lutheranen in een voormalig oudemannenhuis.",true],
+["Multatuli Museum","Amsterdam","Noord-Holland","Klein museum in het geboortehuis van Multatuli (Max Havelaar).",true],
+["Koninklijk Paleis","Amsterdam","Noord-Holland","Het paleis op de Dam, ooit het stadhuis uit de Gouden Eeuw.",true],
+["De Nieuwe Kerk","Amsterdam","Noord-Holland","15de-eeuwse kerk op de Dam, nu een grote tentoonstellingsruimte (nu: Queer Amsterdam).",true],
+["Oude Kerk","Amsterdam","Noord-Holland","Het oudste gebouw van de stad, met hedendaagse kunst, midden op de Wallen.",true],
+["Stadsarchief Amsterdam","Amsterdam","Noord-Holland","Het stadsarchief in gebouw De Bazel, met de Schatkamer en tentoonstellingen.",true],
+["Amsterdam Pipe Museum","Amsterdam","Noord-Holland","Pijpen uit de hele wereld in een grachtenpand.",false],
+["Diamant Museum","Amsterdam","Noord-Holland","De geschiedenis van de diamant en het slijpersvak, aan het Museumplein.",false],
+["De Hollandsche Manege","Amsterdam","Noord-Holland","19de-eeuwse rijschool die nog in gebruik is, met een ruitermuseum.",false],
+["Museum Tot Zover","Amsterdam","Noord-Holland","Uitvaartmuseum over dood en rouw, naast begraafplaats De Nieuwe Ooster.",false],
+["Museum van de Geest","Amsterdam","Noord-Holland","Museum over de geest en outsider art, in het H'ART-complex aan de Amstel.",false],
+["De Appel","Amsterdam","Noord-Holland","Centrum voor hedendaagse kunst.",false],
+["W139","Amsterdam","Noord-Holland","Experimentele kunstruimte in het centrum.",false],
+["Rozenstraat","Amsterdam","Noord-Holland","Ruimte voor hedendaagse kunst in de Jordaan.",false],
+["Rijksmuseum Muiderslot","Muiden","Noord-Holland","Middeleeuws kasteel aan het IJmeer, met wapenkamer en tuinen.",true],
+["Frans Hals Museum","Haarlem","Noord-Holland","Portretten van Frans Hals en meesters uit de Gouden Eeuw in een oud hofje.",false],
+["Teylers Museum","Haarlem","Noord-Holland","Het oudste museum van Nederland (1784): fossielen, instrumenten en tekeningen van oude meesters.",false],
+["Zaans Museum","Zaandam","Noord-Holland","Industrie en leven aan de Zaan, naast de molens van de Zaanse Schans.",false],
+["Zuiderzeemuseum","Enkhuizen","Noord-Holland","Openluchtmuseum met het vissersdorp van de vroegere Zuiderzee.",false],
+["Cobra Museum","Amstelveen","Noord-Holland","Kunst van de CoBrA-beweging (Appel, Corneille, Constant) en moderne kunst.",false],
+["Singer Laren","Laren","Noord-Holland","Kunst van eind 19de en begin 20ste eeuw, met beeldentuin.",false],
+["Museum Kranenburgh","Bergen","Noord-Holland","Kunst van de Bergense School en exposities in een villa bij de duinen.",false],
+["Westfries Museum","Hoorn","Noord-Holland","Geschiedenis van West-Friesland en de VOC in een 17de-eeuws gebouw.",false],
+["Stedelijk Museum Alkmaar","Alkmaar","Noord-Holland","Kunst en geschiedenis van Alkmaar, van het beleg van 1573 tot de Bergense School.",false],
+["Mauritshuis","Den Haag","Zuid-Holland","Het Meisje met de parel van Vermeer, Het puttertje en Rembrandt in een 17de-eeuws stadspaleis.",false],
+["Kunstmuseum Den Haag","Den Haag","Zuid-Holland","De grootste Mondriaan-collectie ter wereld, Escher, toegepaste kunst en mode.",false],
+["Escher in Het Paleis","Den Haag","Zuid-Holland","Het werk van M.C. Escher in een voormalig winterpaleis van de koningin.",false],
+["Panorama Mesdag","Den Haag","Zuid-Holland","Een panoramaschilderij van 120 meter van de duinen van Scheveningen in 1881.",false],
+["Museum Voorlinden","Wassenaar","Zuid-Holland","Hedendaagse kunst op een landgoed tussen de duinen (Ron Mueck, Turrell).",false],
+["Beelden aan Zee","Den Haag (Scheveningen)","Zuid-Holland","Beeldenmuseum in de duinen aan zee.",false],
+["Rijksmuseum van Oudheden","Leiden","Zuid-Holland","Nationaal museum voor oudheden: Egyptische tempel, mummies en Nederlandse archeologie.",false],
+["Naturalis","Leiden","Zuid-Holland","Biodiversiteitscentrum met een echt T. rex-skelet.",false],
+["Museum De Lakenhal","Leiden","Zuid-Holland","Kunst en geschiedenis van Leiden: de jonge Rembrandt, Lucas van Leyden.",false],
+["Rijksmuseum Boerhaave","Leiden","Zuid-Holland","Geschiedenis van wetenschap en geneeskunde.",false],
+["Wereldmuseum Leiden","Leiden","Zuid-Holland","Volkenkunde: culturen van over de hele wereld (het vroegere Museum Volkenkunde).",false],
+["Museum Prinsenhof Delft","Delft","Zuid-Holland","Waar Willem van Oranje vermoord werd; geschiedenis van Delft en het Delfts blauw.",false],
+["Kunsthal Rotterdam","Rotterdam","Zuid-Holland","Grote wisselende tentoonstellingen in een gebouw van Rem Koolhaas.",false],
+["Depot Boijmans Van Beuningen","Rotterdam","Zuid-Holland","Een bezoekbaar kunstdepot in de vorm van een spiegelende kom.",false],
+["Maritiem Museum Rotterdam","Rotterdam","Zuid-Holland","Haven en zee, met veel interactiefs voor kinderen.",false],
+["Nederlands Fotomuseum","Rotterdam","Zuid-Holland","Nationaal fotografiemuseum in Las Palmas op de Kop van Zuid.",false],
+["Dordrechts Museum","Dordrecht","Zuid-Holland","Nederlandse schilderkunst van de 17de tot de 20ste eeuw, met Aelbert Cuyp.",false],
+["Museum Gouda","Gouda","Zuid-Holland","Kunst en geschiedenis van Gouda in een oud gasthuis.",false],
+["Centraal Museum","Utrecht","Utrecht","Oude en moderne kunst, Rietveld en Nijntje; beheert ook het Rietveld Schröderhuis (reserveren).",false],
+["Museum Catharijneconvent","Utrecht","Utrecht","Christelijke kunst en religie in Nederland, in een voormalig klooster.",false],
+["Museum Speelklok","Utrecht","Utrecht","Zelfspelende muziekinstrumenten: draaiorgels en speeldozen.",false],
+["Het Spoorwegmuseum","Utrecht","Utrecht","Treinmuseum in een historisch station, heel geschikt voor gezinnen.",false],
+["Universiteitsmuseum Utrecht","Utrecht","Utrecht","Wetenschap en de Oude Hortus van de universiteit.",false],
+["Nationaal Militair Museum","Soesterberg","Utrecht","Militaire geschiedenis met vliegtuigen en tanks op een oude vliegbasis.",false],
+["Kasteel Slot Zuylen","Utrecht (Oud-Zuilen)","Utrecht","Kasteel met historische interieurs, het huis van Belle van Zuylen.",false],
+["Kunsthal KAdE / Mondriaanhuis","Amersfoort","Utrecht","Hedendaagse kunst en design, en het geboortehuis van Mondriaan.",false],
+["Kröller-Müller Museum","Otterlo","Gelderland","De tweede Van Gogh-collectie ter wereld en een beeldentuin in Nationaal Park De Hoge Veluwe (parkentree apart).",false],
+["Nederlands Openluchtmuseum","Arnhem","Gelderland","Openluchtmuseum: huizen, boerderijen en molens uit de hele Nederlandse geschiedenis.",false],
+["Paleis Het Loo","Apeldoorn","Gelderland","Barok koninklijk paleis met gerestaureerde tuinen.",false],
+["Airborne Museum Hartenstein","Oosterbeek","Gelderland","De Slag om Arnhem (1944) in het vroegere Britse hoofdkwartier.",false],
+["Museum Arnhem","Arnhem","Gelderland","Moderne en hedendaagse kunst met uitzicht op de Rijn.",false],
+["Museum Het Valkhof","Nijmegen","Gelderland","Romeinse archeologie en kunst in de oudste stad van het land.",false],
+["Vrijheidsmuseum","Groesbeek","Gelderland","De Tweede Wereldoorlog en de bevrijding.",false],
+["Van Abbemuseum","Eindhoven","Noord-Brabant","Moderne en hedendaagse kunst: Picasso, Kandinsky, Lissitzky.",false],
+["Het Noordbrabants Museum","'s-Hertogenbosch","Noord-Brabant","Kunst en geschiedenis van Brabant, met Van Gogh en Jheronimus Bosch.",false],
+["Design Museum Den Bosch","'s-Hertogenbosch","Noord-Brabant","Design en toegepaste kunst.",false],
+["TextielMuseum","Tilburg","Noord-Brabant","Museum en werkend textiellab in een oude fabriek.",false],
+["De Pont","Tilburg","Noord-Brabant","Hedendaagse kunst in een voormalige wolspinnerij.",false],
+["Stedelijk Museum Breda","Breda","Noord-Brabant","Kunst, design en geschiedenis van Breda.",false],
+["Bonnefanten","Maastricht","Limburg","Oude en hedendaagse kunst in een gebouw van Aldo Rossi aan de Maas.",false],
+["Limburgs Museum","Venlo","Limburg","Geschiedenis en archeologie van Limburg.",false],
+["Discovery Museum","Kerkrade","Limburg","Interactieve wetenschap en techniek.",false],
+["Rijksmuseum Twenthe","Enschede","Overijssel","Kunst van de middeleeuwen tot nu.",false],
+["Museum de Fundatie","Zwolle","Overijssel","Kunst onder een rugbybal-vormige koepel op een oud paleis van justitie.",false],
+["Drents Museum","Assen","Drenthe","Archeologie (veenlijken) en grote internationale tentoonstellingen.",false],
+["Herinneringscentrum Kamp Westerbork","Hooghalen","Drenthe","Het voormalige doorgangskamp van waaruit ook Anne Frank werd gedeporteerd.",false],
+["Hunebedcentrum","Borger","Drenthe","De prehistorische hunebedden en de cultuur die ze bouwde.",false],
+["Groninger Museum","Groningen","Groningen","Kunst en design in een kleurrijk postmodern gebouw op het water.",false],
+["Fries Museum","Leeuwarden","Friesland","Geschiedenis en kunst van Friesland, inclusief Mata Hari.",false],
+["Keramiekmuseum Princessehof","Leeuwarden","Friesland","Keramiek en porselein uit de hele wereld.",false],
+["Eise Eisinga Planetarium","Franeker","Friesland","Het oudste nog werkende planetarium ter wereld (1781).",false],
+["Museum Belvédère","Heerenveen","Friesland","Moderne Friese kunst midden in de natuur.",false],
+["Zeeuws Museum","Middelburg","Zeeland","Geschiedenis en wandtapijten van Zeeland in de abdij.",false],
+["Watersnoodmuseum","Ouwerkerk","Zeeland","De watersnoodramp van 1953, in de caissons van de dijk.",false],
+["Batavialand","Lelystad","Flevoland","Poldergeschiedenis en de werf met de replica van het schip Batavia.",false],
+["Museum Schokland","Schokland","Flevoland","Voormalig Zuiderzee-eiland, UNESCO-werelderfgoed.",false]
+];
+
+const PH={"Rijksmuseum": ["img/eac641d1b9.webp", "South_facade_of_the_Rijksmuseum_Amsterdam_(DSCF0528).jpg"], "Stedelijk Museum": ["img/6d47350b55.webp", "De_nieuwe_vleugel_van_het_Stedelijk_Museum_Amsterdam.jpg"], "Anne Frank Huis": ["img/e33fab1345.webp", "Amsterdam_(NL),_Anne-Frank-Huis_--_2015_--_7185.jpg"], "Museum Het Rembrandthuis": ["img/6edafb47e3.webp", "Rembrandshuis.jpg"], "Joods Museum + Portugese Synagoge": ["img/7a931f212f.webp", "Amsterdam,_Portugese_Synagoge,_(17_januari_2015)_131.JPG"], "Nationaal Holocaustmuseum": ["img/8689914336.webp", "Hollandsche_Schouwburg.jpg"], "Het Scheepvaartmuseum": ["img/09b6590608.webp", "Nederlands_Scheepvaartmuseum_2024.jpg"], "NEMO Science Museum": ["img/e566389902.webp", "Armsterdam_-_panoramio.jpg"], "Verzetsmuseum": ["img/ad0f128144.webp", "Gepleisterde_gevel_met_ingangspartij_en_op_geveltop_een_kleine_Davidster_-_Amsterdam_-_20408986_-_RCE.jpg"], "Wereldmuseum Amsterdam": ["img/028e5e65ba.webp", "Wereldmuseum_Amsterdam_(2024)-1.jpg"], "Amsterdam Museum (in H'ART Museum)": ["img/1441996297.webp", "Ingang_Amsterdam_Museum.jpg"], "H'ART Museum": ["img/20b44ecf94.webp", "Hermitage_Amsterdam_-_Ingang.JPG"], "Allard Pierson": ["img/eac5d239b5.webp", "Allard_Pierson_Museum_ambient_light_01.jpg"], "Museum Ons' Lieve Heer op Solder": ["img/cfa7a4a5c0.webp", "Ons'_Lieve_Heer_op_Solder_2396.jpg"], "Museum Van Loon": ["img/975231a34d.webp", "Amsterdam_-_Museum_Van_Loon_05.JPG"], "Huis Willet-Holthuysen": ["img/2fda4494e4.webp", "Willet-holthuysen.jpg"], "Foam": ["img/69a87c4b37.webp", "Keizersgracht_609,_Amsterdam.JPG"], "Huis Marseille": ["img/c27446f4f2.webp", "Huis_Marseille,_Museum_voor_Fotografie_–_Grachtenzijde_gevels.jpg"], "Eye Filmmuseum": ["img/968102daea.webp", "EYE_Filmmuseum.jpg"], "Museum Het Schip": ["img/0d19512d6f.webp", "Amsterdam_Het_Schip_006.JPG"], "ARTIS Groote Museum": ["img/0d0c8cd5ea.webp", "ArtisIngang.jpg"], "ARTIS-Micropia": ["img/4573acc038.webp", "Micropia_Museum_Amsterdam_4.jpg"], "Embassy of the Free Mind": ["img/b602bd9bf9.webp", "Huis_met_de_hoofden.jpg"], "Koninklijk Paleis": ["img/bdf5df30ce.webp", "Paleis_op_de_Dam_2026.jpg"], "De Nieuwe Kerk": ["img/405834e122.webp", "Iglesia_Nueva,_Ámsterdam,_Países_Bajos,_2016-05-30,_DD_10-12_HDR.jpg"], "Oude Kerk": ["img/1b27489f14.webp", "Amsterdam-508-Oude_Kerk-2010-gje.jpg"], "Stadsarchief Amsterdam": ["img/609054d77d.webp", "Gebouw_de_Bazel.jpg"], "Amsterdam Pipe Museum": ["img/8da5b158a9.webp", "Entrance-pijpenkabinet-1998.jpg"], "Diamant Museum": ["img/cb6b846193.webp", "Holland2011123_DSC2377.JPG"], "De Hollandsche Manege": ["img/21b5703a6f.webp", "Hollandsche_Manege,_Vondelstraat,_Amsterdam.jpg"], "De Appel": ["img/8f7e8ab1b7.webp", "De_Appel_arts_centre,_Amsterdam.jpg"], "W139": ["img/2efe883897.webp", "W139_1.jpg"], "Rijksmuseum Muiderslot": ["img/2f2d1643b5.webp", "Muiderslot_by_Edi_Weissmann.jpg"], "Frans Hals Museum": ["img/061bc44eab.webp", "Frans_Hals_Museum_portal_in_Haarlem.jpg"], "Teylers Museum": ["img/b3caff77c2.webp", "Voorgevel_Teylers_Museum.jpg"], "Zaans Museum": ["img/0cc60a03d1.webp", "Zaans_Museum_-_Eingang.jpg"], "Zuiderzeemuseum": ["img/f8388111f4.webp", "Dubbele_pakhuis_met_trapgevels_-_Enkhuizen_-_20406774_-_RCE.jpg"], "Cobra Museum": ["img/e84289e387.webp", "Cobra_Museum_Amstelveen_DSCF7128.JPG"], "Singer Laren": ["img/19ae1d21c3.webp", "Een_nieuw_Singer_Laren.jpg"], "Westfries Museum": ["img/4be49fc799.webp", "Hoorn_Statencollege.jpg"], "Stedelijk Museum Alkmaar": ["img/fc942fecce.webp", "Stedelijk_Museum_Alkmaar.JPG"], "Kunstmuseum Den Haag": ["img/58dce05215.webp", "Gemeente_museum.jpg"], "Escher in Het Paleis": ["img/a49cfbe34c.webp", "Gevel_Escher_in_Het_Paleis_300_dpi.jpg"], "Museum Voorlinden": ["img/561651342d.webp", "Voorlinden2016-3.jpg"], "Beelden aan Zee": ["img/8f8827759f.webp", "April_2004_Beeld_Scheveningen.JPG"], "Rijksmuseum van Oudheden": ["img/d16f806513.webp", "Rijksmuseum_van_Oudheden.jpg"], "Naturalis": ["img/3c9c7180d6.webp", "Naturalis_building.jpg"], "Museum De Lakenhal": ["img/c6e5d08c74.webp", "De_Lakenhal_6864.jpg"], "Rijksmuseum Boerhaave": ["img/5d17f3ca42.webp", "BoerhaaveMuseum2.jpg"], "Wereldmuseum Leiden": ["img/89a16af45c.webp", "Museum_Volkenkunde_(National_Museum_of_Ethnology)_in_Leiden_2.jpg"], "Kunsthal Rotterdam": ["img/45ae8406ec.webp", "Kunsthal_Rotterdam.JPG"], "Depot Boijmans Van Beuningen": ["img/de6a56c7b1.webp", "Museum_Boijmans_Van_Beuningen,_Rotterdam,_Zuid-Holland.jpg"], "Maritiem Museum Rotterdam": ["img/4de2ef4f8a.webp", "Maritiem_Museum_Rotterdam_1_Fotografie_Marco_de_Swart.jpg"], "Dordrechts Museum": ["img/9ec7659f55.webp", "Dordrecht_-_Dordrechts_Museum.jpg"], "Centraal Museum": ["img/65a78cefd8.webp", "Exterieur_Centraal_Museum.jpg"], "Museum Catharijneconvent": ["img/26c4c51ec0.webp", "Catharijneconvent.JPG"], "Museum Speelklok": ["img/bef5bf7f8d.webp", "Buurkerk_en_Dom.jpg"], "Het Spoorwegmuseum": ["img/2be8ec78ab.webp", "Rijksmonument-36180.jpg"], "Nationaal Militair Museum": ["img/068f06bfbd.webp", "Leopard_I_gate_guard_KU-93-94_pic1.JPG"], "Kasteel Slot Zuylen": ["img/a769985166.webp", "Slot_Zuylen.jpg"], "Kröller-Müller Museum": ["img/c5794a637e.webp", "Entrance_Kröller-Müller_Museum.JPG"], "Nederlands Openluchtmuseum": ["img/775491a04a.webp", "Nederlands_Openluchtmuseum827.JPG"], "Paleis Het Loo": ["img/aea4529c08.webp", "Apeldoorn_Paleis_Het_Loo_1.jpg"], "Airborne Museum Hartenstein": ["img/ced0aa15ca.webp", "Airborne_Museum_Hartenstein.jpg"], "Museum Arnhem": ["img/de1a05b5e4.webp", "Arnhem_-_Utrechtseweg_87_-_3.jpg"], "Museum Het Valkhof": ["img/536e0930d6.webp", "20071118_Museum_Het_Valkhof.jpg"], "Van Abbemuseum": ["img/bd67257a63.webp", "Eindhovenvanabbe06.jpg"], "Het Noordbrabants Museum": ["img/c5bb67c6c7.webp", "Brabants_Museum_main_entrance_building_Den_Bosch_at_21_May_2015_-_panoramio.jpg"], "Design Museum Den Bosch": ["img/4cbb492cf3.webp", "Stedelijk_Museum_'s-Hertogenbosch_DSCF1199.JPG"], "De Pont": ["img/88768a5e8e.webp", "Ingang_Museum_De_Pont.jpg"], "Stedelijk Museum Breda": ["img/c25b4e6df9.webp", "20240126-ROH07359_(1).jpg"], "Bonnefanten": ["img/da858b62c5.webp", "Rocket-shaped_cupola_of_the_Bonnefantenmuseum_in_Maastricht-Centrum_(DSCF7938).jpg"], "Rijksmuseum Twenthe": ["img/6369f8843b.webp", "Enschede_Rijksmuseum_Twenthe.jpg"], "Museum de Fundatie": ["img/4e45cee6ba.webp", "Zwolle,_Museum_de_Fundatie_RM41563_met_de_Peperbus_RM41765_op_de_achtergrond_foto4_2016-06-05_12.18.jpg"], "Drents Museum": ["img/08cf8a61f4.webp", "Gouvernementsgebouw_Assen_-_voorgevel.jpg"], "Herinneringscentrum Kamp Westerbork": ["img/0abb6830a7.webp", "Westerbork_camp_1940-1945.jpg"], "Groninger Museum": ["img/901fff268d.webp", "Groninger_Museum_2.jpg"], "Fries Museum": ["img/b3909ed5ba.webp", "20140531_Fries_Museum_Leeuwarden_Fr_NL.jpg"], "Keramiekmuseum Princessehof": ["img/6aa7941543.webp", "Leeuwarden_-_Keramiekmuseum_Princessehof.jpg"], "Eise Eisinga Planetarium": ["img/7d576a04aa.webp", "Franeker,_Planetarium.jpg"], "Zeeuws Museum": ["img/13aa65d347.webp", "Middelburg_Abtei_1.jpg"], "Batavialand": ["img/e8b9401c98.webp", "De_BATAVIA_voor_de_film_onderweg_als_de_NIEUW_HOORN_(02).jpg"], "Museum Schokland": ["img/3ece43b739.webp", "Schokland4.jpg"]};
+const PINS={"lucia": "2468", "eric": "1357"};
+
+const SUPABASE_URL='https://nnpgsqttmwnzedmvmuuu.supabase.co';
+const SUPABASE_KEY='sb_publishable_eUm37m75FIDfPe1bYTg5qw_xBB3UKSx';
+const STORE={
+  db:null,
+  async init(){if(!window.supabase)throw new Error('no lib');this.db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)},
+  async load(){
+    const out={};
+    const {data,error}=await this.db.from('swipes').select('profile,choices,hist');if(error)throw error;
+    (data||[]).forEach(r=>out[r.profile]=r);
+    const p=await this.db.from('plan').select('name,visited,visited_on');if(p.error)throw p.error;
+    out.plan={};(p.data||[]).forEach(r=>{if(r.visited)out.plan[r.name]={visited:true,date:r.visited_on||''}});
+    return out;
+  },
+  async saveProfile(u,s){const {error}=await this.db.from('swipes').update({choices:s.choices,hist:s.hist,updated_at:new Date().toISOString()}).eq('profile',u);if(error)throw error},
+  async savePlan(p){
+    const rows=Object.entries(p).map(([name,v])=>({name,visited:!!v.visited,visited_on:v.date||null,updated_at:new Date().toISOString()}));
+    const {data}=await this.db.from('plan').select('name');const gone=(data||[]).map(r=>r.name).filter(n=>!p[n]);
+    if(rows.length){const {error}=await this.db.from('plan').upsert(rows);if(error)throw error}
+    if(gone.length){const {error}=await this.db.from('plan').delete().in('name',gone);if(error)throw error}
+  },
+  subscribe(onProfile,onPlan){
+    this.db.channel('mm-live').on('postgres_changes',{event:'UPDATE',schema:'public',table:'swipes'},p=>{if(p.new)onProfile(p.new.profile,p.new)})
+      .on('postgres_changes',{event:'*',schema:'public',table:'plan'},async()=>{const d=await this.load();onPlan(d.plan)}).subscribe();
+  }
+};
+
+/* =================== basis =================== */
+const P={lucia:{name:'Lucía',ini:'L',cls:'l'},eric:{name:'Eric',ini:'E',cls:'e'}};
+const other=u=>u==='lucia'?'eric':'lucia';
+const byName=Object.fromEntries(M.map(m=>[m[0],m]));
+const provs=[...new Set(M.map(m=>m[2]))];
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DECKS={all:{l:'Alle musea',f:m=>true},ams:{l:'Alleen Amsterdam',f:m=>m[1]==='Amsterdam'},sp:{l:'Alleen met Stadspas',f:m=>!!m[4]},out:{l:'Buiten Amsterdam',f:m=>m[1]!=='Amsterdam'},maybe:{l:'Mijn "misschien"',f:(m,u)=>S[u]&&S[u].choices[m[0]]==='maybe'}};
+
+/* =================== state =================== */
+let me=null, deck='all', viewing=null, backDepth=0, loading=true, synced=false;
+let S={lucia:{choices:{},hist:[]},eric:{choices:{},hist:[]}};
+let PLAN={};
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+function loadLocal(){
+  try{const d=JSON.parse(ls('mm2-state')||'null');if(d&&d.lucia&&d.eric)S=d}catch(e){}
+  try{PLAN=JSON.parse(ls('mm2-plan')||'{}')||{}}catch(e){}
+  me=ls('mm2-me');if(!P[me])me=null;
+  deck=ls('mm2-deck')||'all';if(!DECKS[deck])deck='all';
+}
+function saveLocal(){ls('mm2-state',JSON.stringify(S));ls('mm2-plan',JSON.stringify(PLAN));if(me)ls('mm2-me',me);ls('mm2-deck',deck)}
+const saving={},pending={};
+async function saveProfile(u){
+  saveLocal();
+  if(saving[u]){pending[u]=true;return}
+  saving[u]=true;
+  try{await STORE.saveProfile(u,S[u]);setSynced(true)}catch(e){setSynced(false)}
+  saving[u]=false;if(pending[u]){pending[u]=false;saveProfile(u)}
+}
+async function savePlan(){saveLocal();try{await STORE.savePlan(PLAN);setSynced(true)}catch(e){setSynced(false)}}
+function setSynced(ok,msg){
+  synced=ok;
+  $('syncBar').hidden=ok||!me;
+  if(me)$('syncMsg').textContent=msg||`Geen verbinding: je swipes worden alleen in deze browser bewaard en ${P[other(me)].name} ziet ze niet.`;
+  $('syncLine').textContent=ok?'☁️ Gedeeld opgeslagen — jullie zien elkaars swipes':'⚠️ Alleen in deze browser opgeslagen';
+}
+
+/* =================== matches & helpers =================== */
+const ch=(u,n)=>S[u].choices[n];
+const isMatch=n=>ch('lucia',n)==='like'&&ch('eric',n)==='like';
+const matches=()=>M.filter(m=>isMatch(m[0]));
+function deckList(u){return M.filter(m=>DECKS[deck].f(m,u)).map(m=>m[0])}
+function currentName(u){
+  if(viewing)return viewing;
+  const list=deckList(u);
+  return list.find(n=>deck==='maybe'?ch(u,n)==='maybe':!ch(u,n));
+}
+function seenMatches(){try{return JSON.parse(ls('mm2-seen')||'[]')}catch(e){return []}}
+function markSeen(){ls('mm2-seen',JSON.stringify(matches().map(m=>m[0])));$('mDot').hidden=true}
+function checkNewMatches(){
+  const seen=new Set(seenMatches());const nw=matches().filter(m=>!seen.has(m[0]));
+  if(nw.length&&me){ $('mDot').hidden=false;
+    if(!$('matchView').hidden){markSeen();return}
+    toast(`💚 ${nw.length} ${nw.length===1?'nieuwe match':'nieuwe matches'}: ${nw.slice(0,2).map(m=>m[0]).join(', ')}${nw.length>2?'…':''}`,'Bekijk',()=>showTab('match'));
+  }
+}
+function updateBadge(){const n=matches().length;$('mBadge').textContent=n;$('mBadge').hidden=n===0}
+
+/* =================== illustraties =================== */
+const ICONS=[[/van gogh/i,'🌻'],[/anne frank|holocaust|verzet|oorlog|westerbork|airborne|vrijheid|militair|slag/i,'🕊️'],[/fotograf/i,'📷'],[/film/i,'🎬'],[/maritiem|scheepvaart|schip|haven|batavia|zee\b/i,'⚓'],[/microb|wetenschap|nemo|discovery|boerhaave/i,'🔬'],[/planetarium/i,'🔭'],[/kasteel|paleis|slot|muiderslot/i,'🏰'],[/synagoge|joods/i,'🕍'],[/kerk|klooster|christelijk|luther|solder/i,'⛪'],[/trein|spoorweg/i,'🚂'],[/dinosaur|naturalis|t\. rex|biodiversiteit|natuur/i,'🦖'],[/muziek|speelklok|instrument/i,'🎶'],[/openlucht|molen|zaan|zuiderzee|polder|schokland|eiland/i,'🌷'],[/keramiek|porselein/i,'🏺'],[/egypt|oudheden|archeolog|romeins|hunebed/i,'🏺'],[/diamant/i,'💎'],[/pijp/i,'🪈'],[/manege|ruiter/i,'🐎'],[/uitvaart/i,'🕯️'],[/architect|stedenbouw|maquette|grachten|woning/i,'🏙️'],[/huis|multatuli/i,'🏠'],[/archief|bibliotheek|boeken/i,'📜'],[/textiel/i,'🧵'],[/design/i,'🪑'],[/beelden/i,'🗿'],[/watersnood/i,'🌊'],[/geest|outsider/i,'🧠'],[/geschiedenis/i,'🏛️'],[/kunst|schilder|portret/i,'🎨']];
+function iconFor(m){const t=m[0]+' '+m[3];for(const [re,e] of ICONS){if(re.test(t))return e}return '🏛️'}
+function hue(str){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%360;return h}
+function picStyle(m){const h=hue(m[0]);return `background:linear-gradient(135deg,hsl(${h} 62% 52%),hsl(${(h+40)%360} 70% 38%))`}
+function picHtml(m){const p=PH[m[0]];return p?`<img src="${p[0]}" alt="" draggable="false" onerror="this.remove()">`:`<span class="emo" aria-hidden="true">${iconFor(m)}</span>`}
+function creditHtml(m){const p=PH[m[0]];return p&&p[1]?`<a class="credit" href="https://commons.wikimedia.org/wiki/File:${encodeURIComponent(p[1].replace(/ /g,'_'))}" target="_blank" rel="noopener">Foto: Wikimedia Commons</a>`:''}
+const spTag=m=>m[4]?`<span class="tag sp">✓ Stadspas${typeof m[4]==='string'?' · '+esc(m[4]):''}</span>`:'<span class="tag no-sp">Geen Stadspas-actie</span>';
+const gq=s=>'https://www.google.com/search?q='+encodeURIComponent(s);
+
+/* =================== welcome & profiel =================== */
+function renderWelcome(){
+  $('welcome').hidden=!!me;$('app').hidden=!me;$('top').hidden=!me;
+  if(me){$('meAv').textContent=P[me].ini;$('meAv').className='av '+P[me].cls;$('meName').textContent=P[me].name;$('meChip').className='chip '+P[me].cls;return}
+  const cnt=u=>Object.keys(S[u].choices).length;
+  $('wlL').textContent=cnt('lucia')?`${cnt('lucia')} geswipet`:'nog niet begonnen';
+  $('wlE').textContent=cnt('eric')?`${cnt('eric')} geswipet`:'nog niet begonnen';
+  $('deckChips').innerHTML=Object.entries(DECKS).filter(([k])=>k!=='maybe').map(([k,d])=>`<button class="chipb" data-d="${k}" aria-pressed="${deck===k}">${d.l} <span style="opacity:.6">(${M.filter(d.f).length})</span></button>`).join('');
+  $('deckChips').querySelectorAll('button').forEach(b=>b.onclick=()=>{deck=b.dataset.d;saveLocal();renderWelcome()});
+}
+document.querySelectorAll('.pbig').forEach(b=>b.onclick=()=>enter(b.dataset.u));
+async function enter(u){
+  if(PINS&&PINS[u]&&ls('mm2-unlocked-'+u)!=='1'){const ok=await askPin(u);if(!ok)return;ls('mm2-unlocked-'+u,'1')}
+  me=u;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');setSynced(synced);checkNewMatches();
+}
+$('meChip').onclick=()=>{const m=$('menu');m.hidden=!m.hidden;$('meChip').setAttribute('aria-expanded',!m.hidden)};
+document.addEventListener('click',e=>{if(!e.target.closest('.chipwrap')){$('menu').hidden=true;$('meChip').setAttribute('aria-expanded','false')}});
+$('mSwitch').onclick=async()=>{
+  const o=other(me);
+  if(PINS&&PINS[o]&&ls('mm2-unlocked-'+o)!=='1'){const ok=await askPin(o);if(!ok)return;ls('mm2-unlocked-'+o,'1')}
+  else if(!(await confirmBox(`Wisselen naar ${P[o].name}?`,`Je swipet daarna als ${P[o].name}. Weet je het zeker?`,'Ja, wisselen')))return;
+  me=o;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');checkNewMatches();
+};
+$('mReset').onclick=async()=>{
+  if(!(await confirmBox('Al je swipes wissen?',`Alle likes, nopes en misschiens van ${P[me].name} worden gewist. Dit kan niet ongedaan worden gemaakt.`,'Ja, wissen',true)))return;
+  S[me]={choices:{},hist:[]};viewing=null;backDepth=0;saveProfile(me);refreshAll();toast('Schone lei. Lekker swipen!');
+};
+$('mHelp').onclick=()=>infoBox('Hoe werkt het?',`<p style="text-align:left">♥ <b>Like</b> = hier wil ik heen. ✗ <b>Nope</b> = liever niet. 🤔 <b>Misschien</b> = later nog eens bekijken (vind je terug in de stapel "Mijn misschien").</p><p style="text-align:left">Willen jullie allebei ergens heen, dan is het een <b>match</b> en komt het museum bij <b>Matching Musea</b>. Daar kun je musea sorteren, als bezocht afvinken of er eentje laten loten.</p><p style="text-align:left">Sleep de kaart naar links of rechts, of gebruik de knoppen. Op een toetsenbord: ← Nope, → Like, ↓ Misschien, Backspace = terug.</p>`);
+
+/* =================== swipen =================== */
+let animating=false;
+function renderSwipe(anim){
+  const view=$('swipeView');
+  if(loading){view.innerHTML='<div class="skel" aria-label="Laden…"></div>';return}
+  const u=me,list=deckList(u),n=list.length;
+  const name=currentName(u);
+  const decided=list.filter(x=>deck==='maybe'?ch(u,x)!=='maybe':!!ch(u,x)).length;
+  const likes=Object.values(S[u].choices).filter(v=>v==='like').length;
+  const nm=matches().length;
+  const deckSel=`<div class="deckrow"><label for="deckSel">Stapel:</label><select id="deckSel">${Object.entries(DECKS).map(([k,d])=>`<option value="${k}"${deck===k?' selected':''}>${d.l} (${M.filter(m=>d.f(m,u)).length})</option>`).join('')}</select><span style="margin-left:auto">♥ ${likes} · 💚 ${nm}</span></div>`;
+  if(!name){
+    const o=other(u),oLeft=list.filter(x=>!ch(o,x)).length,oName=P[o].name;
+    const mInDeck=list.filter(isMatch).length;
+    view.innerHTML=`${deckSel}<div class="done"><div class="big">${deck==='maybe'?'🤔':'🎉'}</div><h2>${deck==='maybe'?'Geen misschiens meer':'Klaar, lekker bezig!'}</h2>
+      <p>${esc(P[u].name)} wil naar <strong>${likes}</strong> musea.<br>Jullie hebben samen <strong>${nm}</strong> ${nm===1?'match':'matches'}${deck!=='all'?` (${mInDeck} in deze stapel)`:''}.</p>
+      <div class="sub">${oLeft?`${esc(oName)} heeft in deze stapel nog <strong>${oLeft}</strong> musea te gaan — er kunnen dus nog matches bijkomen.`:`${esc(oName)} is ook klaar met deze stapel.`}</div>
+      <div class="row-btns"><button class="pill primary" id="goMatch">♥ Bekijk Matching Musea</button>
+      ${S[u].hist.length?'<button class="pill" id="backLast">↶ Terug naar de laatste kaart</button>':''}
+      ${deck!=='all'?'<button class="pill" id="deckAll">Alle musea doen</button>':''}</div></div>`;
+    $('goMatch').onclick=()=>showTab('match');
+    if($('backLast'))$('backLast').onclick=goBack;
+    if($('deckAll'))$('deckAll').onclick=()=>{deck='all';saveLocal();renderSwipe(true)};
+    bindDeck();return;
+  }
+  const m=byName[name],c=ch(u,name),oc=ch(other(u),name),pos=decided+(viewing?0:1);
+  const stamp=c?`<span class="stamp">${c==='like'?'♥ Je koos LIKE':c==='nope'?'✗ Je koos NOPE':'🤔 Je koos MISSCHIEN'}</span>`:'';
+  const oth=oc?`<span class="other">${esc(P[other(u)].name)}: ${oc==='like'?'♥':oc==='nope'?'✗':'🤔'}</span>`:'';
+  view.innerHTML=`${deckSel}
+    <div class="progress"><span>${Math.min(pos,n)} / ${n}</span><span class="bar"><i style="width:${(decided/n*100).toFixed(1)}%"></i></span><span>${viewing?'↶ terugkijken':'&nbsp;'}</span></div>
+    <article class="card${anim&&!reduced?' in':''}" id="card" aria-label="${esc(m[0])}">
+      <span class="dragstamp like" aria-hidden="true">LIKE</span><span class="dragstamp nope" aria-hidden="true">NOPE</span>
+      <div class="pic" style="${picStyle(m)}">${picHtml(m)}<span class="city">${esc(m[1])} · ${esc(m[2])}</span>${creditHtml(m)}${stamp}${oth}</div>
+      <div class="cbody"><h2>${esc(m[0])}</h2><p>${esc(m[3])}</p>${spTag(m)}</div>
+    </article>
+    <div class="actions">
+      <button class="btn back" id="bBack" ${S[u].hist.length>backDepth?'':'disabled'} aria-label="Terug naar de vorige kaart">↶</button>
+      <button class="btn nope" id="bNope" aria-label="Nope">✗ Nope</button>
+      ${deck==='maybe'?'':'<button class="btn maybe" id="bMaybe" aria-label="Misschien">🤔</button>'}
+      <button class="btn like" id="bLike" aria-label="Like">♥ Like</button>
+    </div>
+    <div class="hint">Sleep de kaart · ← Nope · → Like · ↓ Misschien · Backspace = terug</div>`;
+  const nx=list.find(x=>x!==name&&!ch(u,x));if(nx&&PH[nx]){const im=new Image();im.src=PH[nx][0]}
+  $('bNope').onclick=()=>choose('nope');$('bLike').onclick=()=>choose('like');if($('bMaybe'))$('bMaybe').onclick=()=>choose('maybe');
+  $('bBack').onclick=goBack;attachSwipe($('card'));bindDeck();
+}
+function bindDeck(){const s=$('deckSel');if(s)s.onchange=()=>{deck=s.value;viewing=null;backDepth=0;saveLocal();renderSwipe(true)}}
+function attachSwipe(card){
+  let x0=null,y0=null,dx=0,drag=false;const L=card.querySelector('.dragstamp.like'),N=card.querySelector('.dragstamp.nope');
+  card.addEventListener('pointerdown',e=>{if(e.target.closest('a'))return;e.preventDefault();x0=e.clientX;y0=e.clientY;dx=0;drag=true;card.style.transition='none';card.setPointerCapture(e.pointerId)});
+  card.addEventListener('pointermove',e=>{if(!drag)return;dx=e.clientX-x0;const dy=e.clientY-y0;if(Math.abs(dy)>Math.abs(dx)*1.5&&Math.abs(dx)<10)return;
+    card.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`;L.style.opacity=Math.min(Math.max(dx-20,0)/80,1);N.style.opacity=Math.min(Math.max(-dx-20,0)/80,1)});
+  const end=()=>{if(!drag)return;drag=false;card.style.transition='';if(dx>90)choose('like');else if(dx<-90)choose('nope');else{card.style.transform='';L.style.opacity=0;N.style.opacity=0}};
+  card.addEventListener('pointerup',end);card.addEventListener('pointercancel',end);
+}
+function choose(v){
+  if(!me||animating||loading)return;
+  const name=currentName(me);if(!name)return;
+  animating=true;
+  const was=isMatch(name);
+  S[me].choices[name]=v;
+  const h=S[me].hist.filter(x=>x!==name);h.push(name);S[me].hist=h;
+  viewing=null;backDepth=0;
+  saveProfile(me);
+  const card=$('card');card.classList.add(v==='like'?'out-right':v==='nope'?'out-left':'out-down');
+  const now=isMatch(name);
+  setTimeout(()=>{animating=false;refreshAll(true);if(now&&!was){markSeen();showMatch(byName[name])}},reduced?0:260);
+}
+function goBack(){
+  if(!me||animating)return;
+  const h=S[me].hist;if(backDepth>=h.length)return;
+  backDepth++;viewing=h[h.length-backDepth];renderSwipe(true);
+}
+document.addEventListener('keydown',e=>{
+  const ov=document.querySelector('.ov');
+  if(ov){if(e.key==='Escape'){ov.dispatchEvent(new Event('cancel'))}
+    if(e.key==='Tab'){const f=[...ov.querySelectorAll('button,input,a[href]')].filter(x=>!x.disabled);if(!f.length)return;const i=f.indexOf(document.activeElement);const nx=e.shiftKey?(i<=0?f.length-1:i-1):(i>=f.length-1?0:i+1);f[nx].focus();e.preventDefault()}
+    return}
+  if(!me||$('swipeView').hidden)return;
+  if(e.target.matches('input,select,textarea'))return;
+  if(e.key==='ArrowRight')choose('like');else if(e.key==='ArrowLeft')choose('nope');else if(e.key==='ArrowDown'&&deck!=='maybe'){e.preventDefault();choose('maybe')}
+  else if(e.key==='Backspace'){e.preventDefault();goBack()}
+});
+
+/* =================== overlays =================== */
+function openOv(html){const o=document.createElement('div');o.className='ov';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.innerHTML=`<div class="mbox">${html}</div>`;document.body.appendChild(o);
+  const prev=document.activeElement;const f=o.querySelector('input,button');if(f)setTimeout(()=>f.focus(),30);
+  o.close=()=>{o.remove();if(prev&&prev.focus)prev.focus()};o.addEventListener('click',e=>{if(e.target===o)o.dispatchEvent(new Event('cancel'))});return o}
+const COLS=['#059669','#2563eb','#c2410c','#f59e0b','#7c3aed','#ec4899'];
+function showMatch(m){
+  let conf='';if(!reduced)for(let k=0;k<40;k++)conf+=`<i class="confetti" style="left:${Math.random()*100}%;background:${COLS[k%COLS.length]};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*.8}s"></i>`;
+  const o=openOv(`${conf}<h2>HET IS EEN MATCH!</h2><div class="sub">Lucía én Eric willen hierheen. Lekker joh!</div>
+    <div class="avs"><span class="av l">L</span><span class="mh">🧡</span><span class="av e">E</span></div>
+    ${PH[m[0]]?`<img src="${PH[m[0]][0]}" alt="">`:''}<div class="mus">${esc(m[0])}</div><div class="sub">${esc(m[1])}${m[4]?' · ✓ Stadspas':''}</div>
+    <div class="row-btns"><button class="pill primary" id="mGo">Doorgaan met swipen</button><button class="pill" id="mSee">Bekijk Matching Musea</button></div>`);
+  o.querySelector('#mGo').onclick=o.close;o.querySelector('#mSee').onclick=()=>{o.close();showTab('match')};o.addEventListener('cancel',o.close);
+}
+function confirmBox(title,text,okLabel,danger){return new Promise(res=>{
+  const o=openOv(`<h3>${esc(title)}</h3><div class="sub">${esc(text)}</div><div class="row-btns"><button class="pill" id="cNo">Annuleren</button><button class="pill ${danger?'danger':'primary'}" id="cYes">${esc(okLabel)}</button></div>`);
+  o.querySelector('#cNo').onclick=()=>{o.close();res(false)};o.querySelector('#cYes').onclick=()=>{o.close();res(true)};o.addEventListener('cancel',()=>{o.close();res(false)});
+})}
+function infoBox(title,html){const o=openOv(`<h3>${esc(title)}</h3>${html}<div class="row-btns"><button class="pill primary" id="iOk">Oké</button></div>`);o.querySelector('#iOk').onclick=o.close;o.addEventListener('cancel',o.close)}
+function askPin(u){return new Promise(res=>{
+  const o=openOv(`<h3>Pincode van ${esc(P[u].name)}</h3><div class="sub">Vul de 4-cijferige code in om als ${esc(P[u].name)} te swipen.</div>
+    <div class="pin">${[0,1,2,3].map(i=>`<input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="cijfer ${i+1}">`).join('')}</div><div class="err" id="pinErr"></div>
+    <div class="row-btns"><button class="pill" id="pNo">Annuleren</button></div>`);
+  const ins=[...o.querySelectorAll('input')];
+  const check=()=>{const v=ins.map(i=>i.value).join('');if(v.length<4)return;if(v===String(PINS[u])){o.close();res(true)}else{o.querySelector('#pinErr').textContent='Verkeerde code, probeer het nog eens.';ins.forEach(i=>i.value='');ins[0].focus()}};
+  ins.forEach((inp,i)=>{inp.addEventListener('input',()=>{inp.value=inp.value.replace(/\D/g,'').slice(-1);if(inp.value&&i<3)ins[i+1].focus();check()});inp.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!inp.value&&i>0)ins[i-1].focus()})});
+  o.querySelector('#pNo').onclick=()=>{o.close();res(false)};o.addEventListener('cancel',()=>{o.close();res(false)});
+})}
+let toastT=null;
+function toast(msg,btn,fn){
+  const old=document.querySelector('.toast');if(old)old.remove();
+  const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.innerHTML=`<span>${esc(msg)}</span>${btn?`<button>${esc(btn)}</button>`:''}`;
+  if(btn)t.querySelector('button').onclick=()=>{t.remove();fn&&fn()};
+  document.body.appendChild(t);clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),btn?8000:3000);
+}
+
+/* =================== Matching Musea =================== */
+function mcardHtml(m,rib,withPlan){
+  const v=PLAN[m[0]]||{};
+  const links=`<div class="links">
+    ${withPlan?`<button class="lnk ${v.visited?'on':''}" data-vis="${esc(m[0])}">${v.visited?'✓ Bezocht':'Bezocht?'}</button>${v.visited?`<input type="date" value="${esc(v.date||'')}" data-date="${esc(m[0])}" aria-label="Bezocht op">`:''}`:''}
+    <a class="lnk" href="${gq(m[0]+' '+m[1]+' museum')}" target="_blank" rel="noopener">Website ↗</a>
+    ${m[4]?`<a class="lnk" href="${gq('stadspas amsterdam '+m[0])}" target="_blank" rel="noopener">Stadspas-actie ↗</a>`:''}
+  </div>`;
+  return `<div class="mcard${v.visited&&withPlan?' visited':''}">${rib}<div class="mp" style="${picStyle(m)}">${picHtml(m)}</div>
+    <div class="mb"><h3>${esc(m[0])}</h3><div class="c">${esc(m[1])} · ${esc(m[2])}</div><p>${esc(m[3])}</p><div>${spTag(m)}</div>${links}</div></div>`;
+}
+function bindPlan(el){
+  el.querySelectorAll('[data-vis]').forEach(b=>b.onclick=()=>{const n=b.dataset.vis;const v=PLAN[n]||{};if(v.visited)delete PLAN[n];else PLAN[n]={visited:true,date:new Date().toISOString().slice(0,10)};savePlan();renderMatches();renderProfile()});
+  el.querySelectorAll('[data-date]').forEach(i=>i.onchange=()=>{const n=i.dataset.date;PLAN[n]={visited:true,date:i.value};savePlan()});
+}
+function renderMatches(){
+  let ms=matches();const sort=$('mSort').value;
+  const col=(a,b)=>a.localeCompare(b,'nl');
+  if(sort==='name')ms.sort((a,b)=>col(a[0],b[0]));
+  else if(sort==='city')ms.sort((a,b)=>(a[1]==='Amsterdam'?0:1)-(b[1]==='Amsterdam'?0:1)||col(a[1],b[1])||col(a[0],b[0]));
+  else if(sort==='sp')ms.sort((a,b)=>(b[4]?1:0)-(a[4]?1:0)||col(a[0],b[0]));
+  else if(sort==='visited')ms.sort((a,b)=>((PLAN[a[0]]||{}).visited?1:0)-((PLAN[b[0]]||{}).visited?1:0)||col(a[0],b[0]));
+  const vis=ms.filter(m=>(PLAN[m[0]]||{}).visited).length,spc=ms.filter(m=>m[4]).length;
+  $('mSub').textContent=ms.length?`${ms.length} ${ms.length===1?'museum':'musea'} · ${spc} met Stadspas · ${vis} bezocht`:'';
+  $('mRandom').hidden=ms.length-vis<1;
+  const el=$('mList');
+  if(!ms.length){const l=Object.keys(S.lucia.choices).length,e=Object.keys(S.eric.choices).length;
+    el.innerHTML=`<div class="empty"><div class="big">💔</div><strong>Nog geen matches.</strong><br>${l&&e?'Swipe lekker door, het komt vast goed.':!l&&!e?'Nog niemand heeft geswipet. Ga los!':(l?'Eric':'Lucía')+' moet nog beginnen. Geef \'m even een por.'}</div>`;return}
+  el.innerHTML='<div class="mgrid">'+ms.map(m=>mcardHtml(m,(PLAN[m[0]]||{}).visited?'<span class="ribbon ok">✓ BEZOCHT</span>':'<span class="ribbon">MATCH</span>',true)).join('')+'</div>';
+  bindPlan(el);
+}
+$('mSort').onchange=renderMatches;
+$('mRandom').onclick=()=>{
+  const pool=matches().filter(m=>!(PLAN[m[0]]||{}).visited);if(!pool.length)return;
+  const m=pool[Math.floor(Math.random()*pool.length)];
+  const o=openOv(`<div class="sub">🎲 De dobbelsteen zegt…</div><h3 style="font-size:28px">${esc(m[0])}</h3>${PH[m[0]]?`<img src="${PH[m[0]][0]}" alt="">`:''}<div class="sub">${esc(m[1])}${m[4]?' · ✓ Stadspas':''}</div>
+    <div class="row-btns"><button class="pill primary" id="rOk">Top, daar gaan we heen</button><button class="pill" id="rAgain">Nog een keer</button></div>`);
+  o.querySelector('#rOk').onclick=o.close;o.querySelector('#rAgain').onclick=()=>{o.close();$('mRandom').click()};o.addEventListener('cancel',o.close);
+};
+
+/* =================== profiel =================== */
+let pv=null,pf='all';
+function renderProfile(){
+  const u=pv||me;if(!u)return;const o=other(u);
+  $('pvL').setAttribute('aria-pressed',u==='lucia');$('pvE').setAttribute('aria-pressed',u==='eric');
+  const cs=S[u].choices,likes=M.filter(m=>cs[m[0]]==='like'),nopes=Object.values(cs).filter(v=>v==='nope').length,maybes=Object.values(cs).filter(v=>v==='maybe').length;
+  const mt=likes.filter(m=>isMatch(m[0])).length;
+  $('pTitle').textContent=(u===me?'Mijn profiel · ':'Profiel van ')+P[u].name;
+  $('pSub').textContent=`${Object.keys(cs).length} van ${M.length} musea beoordeeld`;
+  $('pStats').innerHTML=`<div class="stat ${P[u].cls}"><b>${likes.length}</b><span>♥ Likes</span></div><div class="stat"><b>${nopes}</b><span>✗ Nopes</span></div><div class="stat y"><b>${maybes}</b><span>🤔 Misschien</span></div><div class="stat m"><b>${mt}</b><span>🧡 Matches</span></div>`;
+  const F={all:['Alle likes',m=>true],match:['Matches',m=>isMatch(m[0])],wait:[`Wacht op ${P[o].name}`,m=>!ch(o,m[0])||ch(o,m[0])==='maybe'],no:[`${P[o].name} zei nee`,m=>ch(o,m[0])==='nope'],maybe:['Mijn misschiens',null]};
+  $('pFilt').innerHTML=Object.entries(F).map(([k,f])=>`<button class="chipb" data-f="${k}" aria-pressed="${pf===k}">${f[0]}</button>`).join('');
+  $('pFilt').querySelectorAll('button').forEach(b=>b.onclick=()=>{pf=b.dataset.f;renderProfile()});
+  const items=pf==='maybe'?M.filter(m=>cs[m[0]]==='maybe'):likes.filter(F[pf][1]);
+  const el=$('pList');
+  if(!items.length){el.innerHTML=`<div class="empty"><div class="big">🤷</div>${pf==='all'?`${esc(P[u].name)} heeft nog nergens ♥ op gegeven.${u===me?' Ga lekker swipen!':''}`:'Niets in deze categorie.'}</div>`;return}
+  el.innerHTML='<div class="mgrid">'+items.map(m=>{const oc=ch(o,m[0]);
+    const rib=pf==='maybe'?'<span class="ribbon wait">🤔 MISSCHIEN</span>':isMatch(m[0])?'<span class="ribbon">🧡 MATCH</span>':oc==='nope'?`<span class="ribbon wait">${esc(P[o].name)}: nope</span>`:oc==='maybe'?`<span class="ribbon wait">${esc(P[o].name)}: misschien</span>`:`<span class="ribbon wait">wacht op ${esc(P[o].name)}</span>`;
+    return mcardHtml(m,rib,isMatch(m[0]))}).join('')+'</div>';
+  bindPlan(el);
+}
+$('pvL').onclick=()=>{pv='lucia';renderProfile()};$('pvE').onclick=()=>{pv='eric';renderProfile()};
+
+/* =================== tabel =================== */
+const sel=$('prov');provs.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o)});
+function voteHtml(u,n){const c=ch(u,n);return `<span class="vote" role="group" aria-label="${P[u].name}">
+  <button class="${c==='like'?'on-like':''}" data-u="${u}" data-n="${esc(n)}" data-v="like" aria-label="${P[u].name}: like" aria-pressed="${c==='like'}">♥</button>
+  <button class="${c==='maybe'?'on-maybe':''}" data-u="${u}" data-n="${esc(n)}" data-v="maybe" aria-label="${P[u].name}: misschien" aria-pressed="${c==='maybe'}">?</button>
+  <button class="${c==='nope'?'on-nope':''}" data-u="${u}" data-n="${esc(n)}" data-v="nope" aria-label="${P[u].name}: nope" aria-pressed="${c==='nope'}">✗</button></span>`}
+function renderTable(){
+  const q=$('q').value.toLowerCase().trim(),p=sel.value,only=$('onlySp').checked,fc=$('fChoice').value;
+  const items=M.filter(m=>{const n=m[0];
+    const f=!fc||(fc==='match'?isMatch(n):fc==='none'?(!ch('lucia',n)&&!ch('eric',n)):fc==='maybe'?(ch('lucia',n)==='maybe'||ch('eric',n)==='maybe'):ch(fc,n)==='like');
+    return f&&(!p||m[2]===p)&&(!only||m[4])&&(!q||(n+' '+m[1]+' '+m[3]).toLowerCase().includes(q))});
+  let html='<table><thead><tr><th>Museum</th><th>Stad</th><th>Wat is het</th><th class="ctr">Stadspas</th><th class="ctr">Lucía</th><th class="ctr">Eric</th><th class="ctr">Match</th></tr></thead><tbody>';
+  items.forEach(m=>{const sp=m[4],mt=isMatch(m[0]);
+    const cell=sp?`<span class="yes" title="Ja">✓</span>${typeof sp==='string'?`<span class="info" title="${esc(sp)}" tabindex="0" aria-label="${esc(sp)}">i</span><span class="note" hidden>${esc(sp)}</span>`:''}`:'<span class="no" title="Nee">✗</span>';
+    html+=`<tr${mt?' class="ismatch"':''}><td class="n">${esc(m[0])}</td><td class="c">${esc(m[1])} · ${esc(m[2])}</td><td class="desc">${esc(m[3])}</td><td class="ctr" data-l="Stadspas">${cell}</td><td class="ctr" data-l="Lucía">${voteHtml('lucia',m[0])}</td><td class="ctr" data-l="Eric">${voteHtml('eric',m[0])}</td><td class="ctr" data-l="Match">${mt?'<span class="mtag">🧡 MATCH</span>':'<span class="dash">—</span>'}</td></tr>`});
+  html+='</tbody></table>';
+  const list=$('list');list.innerHTML=items.length?html:'<p style="margin-top:20px;color:var(--muted)">Geen museum gevonden.</p>';
+  if(matchMedia('(max-width:720px)').matches)list.querySelectorAll('.note').forEach(n=>n.hidden=false);
+  list.querySelectorAll('.vote button').forEach(b=>b.onclick=()=>{
+    const u=b.dataset.u,n=b.dataset.n,v=b.dataset.v;const was=isMatch(n);
+    if(ch(u,n)===v)delete S[u].choices[n];else{S[u].choices[n]=v;const h=S[u].hist.filter(x=>x!==n);h.push(n);S[u].hist=h}
+    saveProfile(u);refreshAll();if(!was&&isMatch(n)){markSeen();showMatch(byName[n])}
+  });
+  const nm=items.filter(m=>isMatch(m[0])).length;$('count').textContent=`${items.length} musea · ${nm} ${nm===1?'match':'matches'}`;
+}
+['q','prov','onlySp','fChoice'].forEach(id=>$(id).addEventListener('input',renderTable));
+new ResizeObserver(()=>document.documentElement.style.setProperty('--ctl-h',$('controls').offsetHeight+'px')).observe($('controls'));
+
+/* =================== tabs =================== */
+function showTab(t){
+  for(const [k,id] of [['swipe','swipeView'],['match','matchView'],['profile','profileView'],['table','tableView']]){$(id).hidden=k!==t;$('tab'+k[0].toUpperCase()+k.slice(1)).setAttribute('aria-selected',k===t)}
+  if(t==='swipe')renderSwipe(false);else if(t==='match'){renderMatches();markSeen()}else if(t==='profile'){pv=pv||me;renderProfile()}else renderTable();
+}
+$('tabSwipe').onclick=()=>showTab('swipe');$('tabMatch').onclick=()=>showTab('match');$('tabProfile').onclick=()=>showTab('profile');$('tabTable').onclick=()=>showTab('table');
+function refreshAll(anim){
+  updateBadge();
+  if(!me)return renderWelcome();
+  if(!$('swipeView').hidden&&!animating)renderSwipe(anim);
+  if(!$('matchView').hidden)renderMatches();
+  if(!$('profileView').hidden)renderProfile();
+  if(!$('tableView').hidden)renderTable();
+}
+
+/* =================== start & sync =================== */
+function applyRemote(u,d){
+  if(!d||!S[u])return;
+  const remote={choices:d.choices||{},hist:Array.isArray(d.hist)?d.hist:[]};
+  const local=S[u];
+  if(Object.keys(remote.choices).length>=Object.keys(local.choices).length){S[u]=remote;saveLocal();if(u!==me||!animating)refreshAll();checkNewMatches()}
+  else if(Object.keys(local.choices).length)saveProfile(u);
+}
+function applyPlan(p){if(!p)return;PLAN=p;saveLocal();if(!$('matchView').hidden)renderMatches();if(!$('profileView').hidden)renderProfile()}
+async function connect(){
+  $('syncRetry').disabled=true;
+  try{
+    await STORE.init();
+    const d=await STORE.load();
+    for(const u of ['lucia','eric'])applyRemote(u,d[u]);
+    if(d.plan)applyPlan(d.plan);
+    STORE.subscribe((u,row)=>applyRemote(u,row),p=>applyPlan(p));
+    setSynced(true);
+  }catch(e){setSynced(false)}
+  loading=false;$('syncRetry').disabled=false;refreshAll();
+}
+$('syncRetry').onclick=connect;
+loadLocal();renderWelcome();updateBadge();
+if(me)showTab('swipe');
+setTimeout(()=>{if(loading){loading=false;refreshAll()}},3000);
+connect().then(()=>{if(me)checkNewMatches()});
+</script>
+</body>
+</html>
