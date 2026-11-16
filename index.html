@@ -50,6 +50,12 @@
   .bar-warn{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 25%,transparent);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:13px;font-weight:600}
   .bar-warn button{margin-left:auto;background:var(--warn);color:var(--warn-bg);border:0;border-radius:99px;padding:6px 12px;font-weight:700;cursor:pointer;white-space:nowrap}
   .bar-warn .ico{font-size:18px}
+  .bar-push{display:flex;align-items:center;gap:10px;background:var(--accent-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:13px;font-weight:600}
+  .bar-push .ico{font-size:18px}
+  .bar-push #pushOn{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:99px;padding:6px 12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .bar-push .x{background:transparent;border:0;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px}
+  .bar-push.ios #pushOn{display:none}
+  .bar-push.ios #pushX{margin-left:auto}
   /* ---------- tabs ---------- */
   .tabs{display:flex;gap:4px;margin:0 0 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
@@ -262,6 +268,8 @@
         <div class="mi" id="syncLine">…</div>
         <hr>
         <button role="menuitem" id="mSwitch">🔁 Wissel van profiel</button>
+        <button role="menuitem" id="mPush" hidden>🔔 Meldingen aanzetten</button>
+        <button role="menuitem" id="mPushTest" hidden>📨 Stuur een testmelding</button>
         <button role="menuitem" id="mReset">🗑️ Mijn swipes wissen</button>
         <button role="menuitem" id="mHelp">❓ Hoe werkt het?</button>
       </div>
@@ -269,6 +277,8 @@
   </header>
 
   <div class="bar-warn" id="syncBar" hidden role="alert"><span class="ico">⚠️</span><span id="syncMsg">Geen verbinding: je swipes worden alleen in deze browser bewaard en Eric ziet ze niet.</span><button id="syncRetry">Opnieuw proberen</button></div>
+
+  <div class="bar-push" id="pushBar" hidden><span class="ico">🔔</span><span id="pushMsg">Wil je een melding krijgen zodra jullie een match hebben?</span><button id="pushOn">Aanzetten</button><button class="x" id="pushX" aria-label="Sluiten">✕</button></div>
 
   <section id="welcome" class="welcome">
     <h1>Museum Match <span style="color:var(--accent)">♥</span></h1>
@@ -442,6 +452,7 @@ const PINS={"lucia": "2468", "eric": "1357"};
 
 const SUPABASE_URL='https://nnpgsqttmwnzedmvmuuu.supabase.co';
 const SUPABASE_KEY='sb_publishable_eUm37m75FIDfPe1bYTg5qw_xBB3UKSx';
+const VAPID_PUBLIC='BBkXWNNSQHhvw8XHEdHMvTbFwsPOJetHe0oeH45ZTa8wko-5MMoNdL_9orFdSLn6IKNN6m_9P00YgEWTQzF9fk0';
 const STORE={
   db:null,
   async init(){if(!window.supabase)throw new Error('no lib');this.db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)},
@@ -460,6 +471,8 @@ const STORE={
     if(rows.length){const {error}=await this.db.from('plan').upsert(rows);if(error)throw error}
     if(gone.length){const {error}=await this.db.from('plan').delete().in('name',gone);if(error)throw error}
   },
+  async savePush(sub,profile){const {error}=await this.db.from('push_subs').upsert({endpoint:sub.endpoint,profile,sub},{onConflict:'endpoint'});if(error)throw error},
+  async removePush(endpoint){const {error}=await this.db.from('push_subs').delete().eq('endpoint',endpoint);if(error)throw error},
   subscribe(onProfile,onPlan){
     this.db.channel('mm-live').on('postgres_changes',{event:'UPDATE',schema:'public',table:'swipes'},p=>{if(p.new)onProfile(p.new.profile,p.new)})
       .on('postgres_changes',{event:'*',schema:'public',table:'plan'},async()=>{const d=await this.load();onPlan(d.plan)}).subscribe();
@@ -548,7 +561,7 @@ function renderWelcome(){
 document.querySelectorAll('.pbig').forEach(b=>b.onclick=()=>enter(b.dataset.u));
 async function enter(u){
   if(PINS&&PINS[u]&&ls('mm2-unlocked-'+u)!=='1'){const ok=await askPin(u);if(!ok)return;ls('mm2-unlocked-'+u,'1')}
-  me=u;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');setSynced(synced);checkNewMatches();
+  me=u;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');setSynced(synced);checkNewMatches();movePushTo(u);renderPush();
 }
 $('meChip').onclick=()=>{const m=$('menu');m.hidden=!m.hidden;$('meChip').setAttribute('aria-expanded',!m.hidden)};
 document.addEventListener('click',e=>{if(!e.target.closest('.chipwrap')){$('menu').hidden=true;$('meChip').setAttribute('aria-expanded','false')}});
@@ -556,7 +569,7 @@ $('mSwitch').onclick=async()=>{
   const o=other(me);
   if(PINS&&PINS[o]&&ls('mm2-unlocked-'+o)!=='1'){const ok=await askPin(o);if(!ok)return;ls('mm2-unlocked-'+o,'1')}
   else if(!(await confirmBox(`Wisselen naar ${P[o].name}?`,`Je swipet daarna als ${P[o].name}. Weet je het zeker?`,'Ja, wisselen')))return;
-  me=o;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');checkNewMatches();
+  me=o;viewing=null;backDepth=0;saveLocal();renderWelcome();showTab('swipe');checkNewMatches();movePushTo(o);renderPush();
 };
 $('mReset').onclick=async()=>{
   if(!(await confirmBox('Al je swipes wissen?',`Alle likes, nopes en misschiens van ${P[me].name} worden gewist. Dit kan niet ongedaan worden gemaakt.`,'Ja, wissen',true)))return;
@@ -774,6 +787,58 @@ function renderTable(){
 ['q','prov','onlySp','fChoice'].forEach(id=>$(id).addEventListener('input',renderTable));
 new ResizeObserver(()=>document.documentElement.style.setProperty('--ctl-h',$('controls').offsetHeight+'px')).observe($('controls'));
 
+
+/* =================== pushmeldingen =================== */
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const pushApi=!!(STORE.savePush&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window);
+let REG=null,pushOn=false;
+function b64u(s){const p='='.repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...b].map(c=>c.charCodeAt(0)))}
+async function initPush(){
+  if(!STORE.savePush)return;
+  if(pushApi){try{REG=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;const s=await REG.pushManager.getSubscription();pushOn=!!s&&Notification.permission==='granted';if(pushOn&&me)STORE.savePush(s.toJSON(),me).catch(()=>{})}catch(e){REG=null}}
+  renderPush();
+}
+function renderPush(){
+  const bar=$('pushBar'),mi=$('mPush'),mt=$('mPushTest');
+  const dismissed=ls('mm2-pushx')==='1';
+  bar.classList.remove('ios');
+  if(!STORE.savePush||!me){bar.hidden=true;mi.hidden=true;mt.hidden=true;return}
+  if(!pushApi||!REG){
+    // iPhone in Safari: eerst op het beginscherm zetten
+    if(isIOS&&!standalone){bar.classList.add('ios');$('pushMsg').innerHTML='📱 Meldingen op iPhone: tik in Safari op <b>Deel</b> → <b>Zet op beginscherm</b>, open Museum Match vanaf je beginscherm en zet ze daar aan.';bar.hidden=dismissed;mi.hidden=false;mi.textContent='📱 Meldingen op iPhone…';mt.hidden=true}
+    else{bar.hidden=true;mi.hidden=true;mt.hidden=true}
+    return;
+  }
+  if(Notification.permission==='denied'){$('pushMsg').textContent='🔕 Meldingen zijn geblokkeerd. Zet ze aan in de instellingen van je browser of telefoon voor deze site.';bar.classList.add('ios');bar.hidden=dismissed;mi.hidden=true;mt.hidden=true;return}
+  $('pushMsg').textContent='Wil je een melding krijgen zodra jullie een match hebben?';
+  bar.hidden=pushOn||dismissed;
+  mi.hidden=false;mi.textContent=pushOn?'🔕 Meldingen uitzetten':'🔔 Meldingen aanzetten';
+  mt.hidden=!pushOn;
+}
+async function enablePush(){
+  if(!REG){renderPush();return}
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){renderPush();toast('Meldingen niet toegestaan');return}
+    let s=await REG.pushManager.getSubscription();
+    if(!s)s=await REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUBLIC)});
+    await STORE.savePush(s.toJSON(),me);
+    pushOn=true;renderPush();toast('🔔 Meldingen staan aan. Je hoort het zodra er een match is!');
+  }catch(e){toast('Meldingen aanzetten lukte niet. Probeer het later opnieuw.')}
+}
+async function disablePush(){
+  try{const s=REG&&await REG.pushManager.getSubscription();if(s){await STORE.removePush(s.endpoint).catch(()=>{});await s.unsubscribe()}}catch(e){}
+  pushOn=false;renderPush();toast('🔕 Meldingen staan uit');
+}
+$('pushOn').onclick=enablePush;
+$('pushX').onclick=()=>{ls('mm2-pushx','1');$('pushBar').hidden=true};
+$('mPush').onclick=()=>{$('menu').hidden=true;if(!pushApi||!REG){ls('mm2-pushx','0');renderPush();if(isIOS&&!standalone)infoBox('Meldingen op iPhone','<p style="text-align:left">Op iPhone werken meldingen alleen als Museum Match op je beginscherm staat:</p><ol style="text-align:left"><li>Open deze pagina in <b>Safari</b>.</li><li>Tik op <b>Deel</b> (vierkantje met pijl).</li><li>Kies <b>Zet op beginscherm</b>.</li><li>Open Museum Match vanaf je beginscherm en zet meldingen aan via je profielmenu.</li></ol>');return}pushOn?disablePush():enablePush()};
+$('mPushTest').onclick=async()=>{$('menu').hidden=true;try{await REG.showNotification('🧡 Testmelding',{body:'Zo ziet een match-melding eruit.',icon:'icon-192.png',badge:'icon-192.png',tag:'test'});}catch(e){toast('Testmelding lukte niet')}};
+async function movePushTo(u){if(!pushOn||!REG)return;try{const s=await REG.pushManager.getSubscription();if(s)await STORE.savePush(s.toJSON(),u)}catch(e){}}
+function routeHash(){if(me&&location.hash==='#matches')showTab('match')}
+addEventListener('hashchange',routeHash);
+
 /* =================== tabs =================== */
 function showTab(t){
   for(const [k,id] of [['swipe','swipeView'],['match','matchView'],['profile','profileView'],['table','tableView']]){$(id).hidden=k!==t;$('tab'+k[0].toUpperCase()+k.slice(1)).setAttribute('aria-selected',k===t)}
@@ -812,7 +877,8 @@ async function connect(){
 }
 $('syncRetry').onclick=connect;
 loadLocal();renderWelcome();updateBadge();
-if(me)showTab('swipe');
+if(me){showTab('swipe');routeHash()}
+initPush();
 setTimeout(()=>{if(loading){loading=false;refreshAll()}},3000);
 connect().then(()=>{if(me)checkNewMatches()});
 </script>
